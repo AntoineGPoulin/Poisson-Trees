@@ -6,65 +6,18 @@ from matplotlib.collections import PatchCollection
 import matplotlib.cm as cm
 import networkx as nx
 import time
+import dipvt_sec
 
 # Example usage# Complexity is approximated at O(h * g^2 * log g), where h is height, g is gridsize.
 rate = 0.5
 dimensions = 2
-region_sizes = (100, 100)
-height = 10
+region_sizes = (200, 200)
+height = 5
 
 # Seeding
 seeds = None
 # Start the timer
 start_time = time.time()
-
-def poisson_point_process(rate, dimensions, region_sizes, seed=None):
-    """
-    Generate Poisson Point Process samples in arbitrary dimensions.
-    
-    Parameters:
-    rate (float): Intensity of the Poisson point process.
-    dimensions (int): Number of dimensions.
-    region_sizes (tuple): Size of the region in each dimension.
-    seed (int, optional): Seed for random number generation. Defaults to None.
-    
-    Returns:
-    numpy.ndarray: Array of points generated from the Poisson Point Process.
-    """
-    np.random.seed(seed)
-    volume = np.prod(region_sizes)
-    num_points = np.random.poisson(rate * volume)
-    points = np.random.rand(num_points, dimensions) * region_sizes
-    return points
-
-def compute_voronoi(points):
-    """
-    Compute Voronoi cells for the given points.
-    
-    Parameters:
-    points (numpy.ndarray): Array of points.
-    
-    Returns:
-    scipy.spatial.Voronoi: Voronoi tessellation.
-    """
-    vor = Voronoi(points)
-    return vor
-
-def generate_multilayer_poisson(rate, dimensions, region_sizes, height, seeds=None):
-    if seeds is None:
-        seeds = [None] * (height + 1)
-
-    point_layers = [poisson_point_process(rate ** i, dimensions, region_sizes, seed=seeds[i]) for i in range(1, height + 1)]
-    return point_layers
-
-def construct_graph(point_layers):
-    G = nx.Graph()
-    for i, points in enumerate(point_layers[:-1]):
-        tree = cKDTree(point_layers[i+1])
-        for point in points:
-            dist, idx = tree.query(point)
-            G.add_edge(tuple(point), tuple(point_layers[i+1][idx]))
-    return G
 
 def get_color_map(point_layers, G):
     color_map = {}
@@ -81,9 +34,9 @@ def get_color_map(point_layers, G):
                 color_idx += 1
     return color_map
 
-def plot_colored_voronoi(point_layers, color_map, G, ax):
-    all_points = np.vstack(point_layers)
-    vor = compute_voronoi(all_points)
+def plot_colored_voronoi_first_layer(point_layers, color_map, G, ax):
+    first_layer_points = point_layers[0]
+    vor = compute_voronoi(first_layer_points)
 
     patches = []
     colors = []
@@ -92,7 +45,7 @@ def plot_colored_voronoi(point_layers, color_map, G, ax):
             polygon = [vor.vertices[i] for i in region]
             patches.append(Polygon(polygon))
 
-            point = all_points[index % len(all_points)]
+            point = first_layer_points[index % len(first_layer_points)]
             for component, color in color_map.items():
                 if tuple(point) in component:
                     colors.append(color)
@@ -123,6 +76,6 @@ print(f"Color map obtained. Time elapsed: {time.time() - start_time:.2f} seconds
 # Plot the colored Voronoi diagram
 print("Plotting the colored Voronoi diagram...")
 fig, ax = plt.subplots()
-plot_colored_voronoi(point_layers, color_map, G, ax)
+plot_colored_voronoi_first_layer(point_layers, color_map, G, ax)
 plt.show()
 print(f"Colored Voronoi diagram plotted. Total time elapsed: {time.time() - start_time:.2f} seconds")
