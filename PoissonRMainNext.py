@@ -60,10 +60,21 @@ def generate_multilayer_poisson(rate, dimensions, region_sizes, height, seeds=No
 def construct_graph(point_layers):
     G = nx.Graph()
     for i, points in enumerate(point_layers[:-1]):
-        tree = cKDTree(point_layers[i+1])
+        # Combine all layers from i+1 to the last layer
+        remaining_layers_points = np.vstack(point_layers[i+1:])
+        
+        # Create a k-d tree for the combined points
+        tree = cKDTree(remaining_layers_points)
+        
         for point in points:
             dist, idx = tree.query(point)
-            G.add_edge(tuple(point), tuple(point_layers[i+1][idx]))
+            
+            # Get the corresponding point from the combined layers
+            nearest_point = tuple(remaining_layers_points[idx])
+            
+            # Add an edge between the current point and its nearest neighbor in the combined layers
+            G.add_edge(tuple(point), nearest_point)
+            
     return G
 
 def get_color_map(point_layers, G):
@@ -104,8 +115,6 @@ def plot_colored_voronoi_first_layer(point_layers, color_map, ax):
     ax.set_xlim(vor.min_bound[0] - 0.1, vor.max_bound[0] + 0.1)
     ax.set_ylim(vor.min_bound[1] - 0.1, vor.max_bound[1] + 0.1)
 
-
-
 # Generate the multilayer Poisson point process
 print("Generating multilayer Poisson point process...")
 point_layers = generate_multilayer_poisson(rate, dimensions, region_sizes, height, seeds=seeds)
@@ -125,5 +134,6 @@ print(f"Color map obtained. Time elapsed: {time.time() - start_time:.2f} seconds
 print("Plotting the colored Voronoi diagram...")
 fig, ax = plt.subplots()
 plot_colored_voronoi_first_layer(point_layers, color_map, ax)
+plt.title('Picking next layer')
 plt.show()
 print(f"Colored Voronoi diagram plotted. Total time elapsed: {time.time() - start_time:.2f} seconds")
