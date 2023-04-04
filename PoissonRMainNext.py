@@ -3,6 +3,7 @@ from scipy.spatial import Voronoi, cKDTree
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 import matplotlib
+from matplotlib.collections import PatchCollection
 import networkx as nx
 import time
 
