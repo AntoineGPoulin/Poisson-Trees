@@ -3,7 +3,7 @@ from scipy.spatial import Voronoi, cKDTree
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
-import matplotlib.cm as cm
+import matplotlib
 import networkx as nx
 import time
 
@@ -71,7 +71,7 @@ def get_color_map(point_layers, G):
     
     # Use the tab20 color map to get distinct colors
     color_idx = 0
-    unique_colors = cm.get_cmap('tab20', 20)
+    unique_colors = matplotlib.colors.ListedColormap(matplotlib.colors.TABLEAU_COLORS, N=20)
 
     for node in G:
         if node in point_layers[0]:
@@ -81,7 +81,7 @@ def get_color_map(point_layers, G):
                 color_idx += 1
     return color_map
 
-def plot_colored_voronoi_first_layer(point_layers, color_map, G, ax):
+def plot_colored_voronoi_first_layer(point_layers, color_map, ax):
     first_layer_points = point_layers[0]
     vor = compute_voronoi(first_layer_points)
 
@@ -98,7 +98,7 @@ def plot_colored_voronoi_first_layer(point_layers, color_map, G, ax):
                     colors.append(color)
                     break
 
-    p = PatchCollection(patches, alpha=0.4)
+    p = PatchCollection(patches, alpha=0.6)
     p.set_color(colors)
     ax.add_collection(p)
     ax.set_xlim(vor.min_bound[0] - 0.1, vor.max_bound[0] + 0.1)
@@ -124,6 +124,6 @@ print(f"Color map obtained. Time elapsed: {time.time() - start_time:.2f} seconds
 # Plot the colored Voronoi diagram
 print("Plotting the colored Voronoi diagram...")
 fig, ax = plt.subplots()
-plot_colored_voronoi_first_layer(point_layers, color_map, G, ax)
+plot_colored_voronoi_first_layer(point_layers, color_map, ax)
 plt.show()
 print(f"Colored Voronoi diagram plotted. Total time elapsed: {time.time() - start_time:.2f} seconds")
