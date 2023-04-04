@@ -8,10 +8,10 @@ import networkx as nx
 import time
 
 # Example usage# Complexity is approximated at O(h * g^2 * log g), where h is height, g is gridsize.
-rate = 0.5
+rate = 0.3
 dimensions = 2
 region_sizes = (100, 100)
-height = 10
+height = 5
 
 # Seeding
 seeds = None
@@ -59,23 +59,32 @@ def generate_multilayer_poisson(rate, dimensions, region_sizes, height, seeds=No
 
 def construct_graph(point_layers):
     G = nx.Graph()
-    for i, points in enumerate(point_layers[:-1]):
-        # Combine all layers from i+1 to the last layer
-        remaining_layers_points = np.vstack(point_layers[i+1:])
+    
+    # Flatten all points from layers above the first one
+    points_above_first_layer = np.vstack(point_layers[1:])
+    
+    # Build a single cKDTree for all points above the first layer
+    tree = cKDTree(points_above_first_layer)
+    
+    for point in point_layers[0]:
+        # Find the nearest neighbor among all points above the first layer
+        dist, idx = tree.query(point)
         
-        # Create a k-d tree for the combined points
-        tree = cKDTree(remaining_layers_points)
+        # Get the actual nearest neighbor point
+        nearest_neighbor = tuple(points_above_first_layer[idx])
         
-        for point in points:
-            dist, idx = tree.query(point)
-            
-            # Get the corresponding point from the combined layers
-            nearest_point = tuple(remaining_layers_points[idx])
-            
-            # Add an edge between the current point and its nearest neighbor in the combined layers
-            G.add_edge(tuple(point), nearest_point)
-            
+        G.add_edge(tuple(point), nearest_neighbor)
+    
     return G
+
+def plot_trees(point_layers, color_map, G, ax):
+    for node in G:
+        if node in point_layers[0]:
+            component = frozenset(nx.node_connected_component(G, node))
+            color = color_map[component]
+            for edge in nx.dfs_edges(G, source=node):
+                p1, p2 = np.array(edge[0]), np.array(edge[1])
+                ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color=color, lw=2)
 
 def get_color_map(point_layers, G):
     color_map = {}
@@ -133,7 +142,15 @@ print(f"Color map obtained. Time elapsed: {time.time() - start_time:.2f} seconds
 # Plot the colored Voronoi diagram
 print("Plotting the colored Voronoi diagram...")
 fig, ax = plt.subplots()
+
+# Plot the colored Voronoi cells
 plot_colored_voronoi_first_layer(point_layers, color_map, ax)
+
+# Plot the trees with the same colors as their associated components
+plot_trees(point_layers, color_map, G, ax)
+
+ax.set_xlim(0, region_sizes[0])
+ax.set_ylim(0, region_sizes[1])
 plt.title('Picking next layer')
 plt.show()
 print(f"Colored Voronoi diagram plotted. Total time elapsed: {time.time() - start_time:.2f} seconds")
