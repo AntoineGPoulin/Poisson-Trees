@@ -73,38 +73,33 @@ def get_component_colors(point_layers, G):
     color_idx = 0
     unique_colors = matplotlib.colors.ListedColormap(matplotlib.colors.TABLEAU_COLORS, N=20)
 
-    for node in G:
-        if node in point_layers[0]:
-            component = frozenset(nx.node_connected_component(G, node))
-            if component not in color_map:
-                color_map[component] = unique_colors(color_idx % 20)
-                color_idx += 1
+    # Generate a list of connected components
+    components = list(nx.connected_components(G))
+
+    for component in components:
+        color = unique_colors(color_idx % 20)
+        color_idx += 1
+        for node in component:
+            if node in point_layers[0]:
+                color_map[node] = color
+
     return color_map
 
-# Plot the trees and Voronoi cells with the option to show or hide tree edges
+
 def plot_trees_and_voronoi_cells(point_layers, G, component_colors, ax, show_tree_edges=True):
     first_layer_points = point_layers[0]
     vor = compute_voronoi(first_layer_points)
 
-    for node, edges in G.adj.items():
-        if node in first_layer_points:
-            component = frozenset(nx.node_connected_component(G, node))
-            color = component_colors[component]
-        else:
-            # Find the connected component color for higher layer nodes
-            for edge in edges:
-                if edge in first_layer_points:
-                    component = frozenset(nx.node_connected_component(G, edge))
-                    color = component_colors[component]
-                    break
+    # Plot the tree edges
+    if show_tree_edges:
+        for node, edges in G.adj.items():
+            if node in first_layer_points:
+                color = component_colors[node]
+                for edge in edges:
+                    p1, p2 = np.array(node), np.array(edge)
+                    ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color=color, lw=2)
 
-        # Plot edges with the color of the connected component
-        if show_tree_edges:
-            for edge in edges:
-                p1, p2 = np.array(node), np.array(edge)
-                ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color=color, lw=2)
-
-    # Plot the colored Voronoi cells
+    # Plot the Voronoi cells
     patches = []
     colors = []
 
@@ -114,15 +109,13 @@ def plot_trees_and_voronoi_cells(point_layers, G, component_colors, ax, show_tre
             patches.append(Polygon(polygon))
 
             point = tuple(first_layer_points[index % len(first_layer_points)])
-            component = frozenset(nx.node_connected_component(G, point))
-            colors.append(component_colors[component])
+            colors.append(component_colors[point])
 
     p = PatchCollection(patches, alpha=0.6)
     p.set_color(colors)
     ax.add_collection(p)
     ax.set_xlim(vor.min_bound[0] - 0.1, vor.max_bound[0] + 0.1)
     ax.set_ylim(vor.min_bound[1] - 0.1, vor.max_bound[1] + 0.1)
-
 
 # Generate the multilayer Poisson point process
 print("Generating multilayer Poisson point process...")
@@ -149,5 +142,6 @@ plot_trees_and_voronoi_cells(point_layers, G, component_colors, ax, show_tree_ed
 ax.set_xlim(0, region_sizes[0])
 ax.set_ylim(0, region_sizes[1])
 plt.title('Picking next layer')
-plt.show()
 print(f"Colored Voronoi diagram plotted. Total time elapsed: {time.time() - start_time:.2f} seconds")
+plt.show()
+
